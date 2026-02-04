@@ -58,13 +58,25 @@ namespace IdleViking.Editor
             screensRect.anchorMax = Vector2.one;
             screensRect.sizeDelta = Vector2.zero;
 
-            // Create each screen
-            CreateScreen<HomeScreen>(screensObj.transform, "HomeScreen", ScreenType.Home);
-            CreateScreen<BuildingScreen>(screensObj.transform, "BuildingScreen", ScreenType.Buildings);
-            CreateScreen<VikingScreen>(screensObj.transform, "VikingScreen", ScreenType.Vikings);
-            CreateScreen<DungeonScreen>(screensObj.transform, "DungeonScreen", ScreenType.Dungeon);
-            CreateScreen<FarmScreen>(screensObj.transform, "FarmScreen", ScreenType.Farm);
-            CreateScreen<ProgressionScreen>(screensObj.transform, "ProgressionScreen", ScreenType.Progression);
+            // Create each screen and collect them
+            var screensList = new System.Collections.Generic.List<BaseScreen>();
+            screensList.Add(CreateScreen<HomeScreen>(screensObj.transform, "HomeScreen", ScreenType.Home));
+            screensList.Add(CreateScreen<BuildingScreen>(screensObj.transform, "BuildingScreen", ScreenType.Buildings));
+            screensList.Add(CreateScreen<VikingScreen>(screensObj.transform, "VikingScreen", ScreenType.Vikings));
+            screensList.Add(CreateScreen<DungeonScreen>(screensObj.transform, "DungeonScreen", ScreenType.Dungeon));
+            screensList.Add(CreateScreen<FarmScreen>(screensObj.transform, "FarmScreen", ScreenType.Farm));
+            screensList.Add(CreateScreen<ProgressionScreen>(screensObj.transform, "ProgressionScreen", ScreenType.Progression));
+
+            // Assign screens to UIManager
+            var uiManagerSO = new SerializedObject(uiManager);
+            var screensProp = uiManagerSO.FindProperty("screens");
+            screensProp.ClearArray();
+            for (int i = 0; i < screensList.Count; i++)
+            {
+                screensProp.InsertArrayElementAtIndex(i);
+                screensProp.GetArrayElementAtIndex(i).objectReferenceValue = screensList[i];
+            }
+            uiManagerSO.ApplyModifiedProperties();
 
             // Create Popup Container
             var popupContainer = new GameObject("PopupContainer");
@@ -107,7 +119,7 @@ namespace IdleViking.Editor
                 "3. Hit Play!", "OK");
         }
 
-        private static void CreateScreen<T>(Transform parent, string name, ScreenType type) where T : BaseScreen
+        private static T CreateScreen<T>(Transform parent, string name, ScreenType type) where T : BaseScreen
         {
             var screenObj = new GameObject(name);
             screenObj.transform.SetParent(parent, false);
@@ -144,6 +156,7 @@ namespace IdleViking.Editor
             so.ApplyModifiedProperties();
 
             Debug.Log($"[Setup] Created {name}");
+            return screen;
         }
 
         private static void CreateTabButton(Transform parent, string label, ScreenType type)
