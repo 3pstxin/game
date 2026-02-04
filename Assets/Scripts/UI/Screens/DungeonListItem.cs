@@ -41,21 +41,19 @@ namespace IdleViking.UI
             _dungeon = dungeon;
 
             if (nameText != null)
-                nameText.text = dungeon.DisplayName;
+                nameText.text = dungeon.displayName;
 
             if (descriptionText != null)
-                descriptionText.text = dungeon.Description;
-
-            if (icon != null && dungeon.Icon != null)
-                icon.sprite = dungeon.Icon;
+                descriptionText.text = dungeon.description;
 
             if (energyText != null)
-                energyText.text = $"Energy: {dungeon.EnergyCost}";
+                energyText.text = $"Energy: {dungeon.energyCost}";
 
             if (progressText != null)
             {
-                int highestFloor = state.Dungeon.GetHighestFloor(dungeon.DungeonId);
-                progressText.text = $"Best: Floor {highestFloor}/{dungeon.FloorCount}";
+                var progress = state.dungeons.GetProgress(dungeon.dungeonId);
+                int highestFloor = progress?.highestFloorCleared ?? 0;
+                progressText.text = $"Best: Floor {highestFloor}/{dungeon.floorCount}";
             }
         }
 

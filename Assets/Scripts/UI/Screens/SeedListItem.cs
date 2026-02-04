@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using IdleViking.Core;
 using IdleViking.Data;
 using IdleViking.Models;
 
@@ -43,22 +44,14 @@ namespace IdleViking.UI
             _state = state;
 
             if (nameText != null)
-                nameText.text = crop.DisplayName;
-
-            if (icon != null && crop.Icon != null)
-                icon.sprite = crop.Icon;
+                nameText.text = crop.displayName;
 
             if (timeText != null)
-                timeText.text = $"Time: {FormatTime(crop.GrowthTime)}";
+                timeText.text = $"Time: {FormatTime(crop.growTimeSeconds)}";
 
             if (yieldText != null)
             {
-                string yields = "";
-                foreach (var yield in crop.Yields)
-                {
-                    yields += $"{yield.ResourceType}: {yield.MinAmount}-{yield.MaxAmount}\n";
-                }
-                yieldText.text = yields.TrimEnd('\n');
+                yieldText.text = $"{crop.yieldResource}: {crop.yieldAmount}";
             }
 
             RefreshAffordability();
@@ -68,12 +61,21 @@ namespace IdleViking.UI
         {
             if (_cropData == null || _state == null) return;
 
-            if (costDisplay != null)
-                costDisplay.SetCosts(_cropData.PlantCost);
+            if (costDisplay != null && _cropData.plantCosts != null)
+            {
+                var costDict = new System.Collections.Generic.Dictionary<ResourceType, double>();
+                foreach (var c in _cropData.plantCosts)
+                {
+                    costDict[c.resourceType] = c.amount;
+                }
+                costDisplay.SetCosts(costDict);
+            }
 
-            bool canAfford = FarmSystem.CanAffordPlant(_state, _cropData);
+            bool canAfford = _cropData.plantCosts == null || _state.resources.CanAfford(_cropData.plantCosts);
+            bool hasSlot = _state.farm.HasEmptySlot;
+
             if (selectButton != null)
-                selectButton.interactable = canAfford;
+                selectButton.interactable = canAfford && hasSlot;
         }
 
         private void HandleSelect()

@@ -129,12 +129,10 @@ namespace IdleViking.UI
         {
             return statType switch
             {
-                StatType.MaxHP => "HP",
-                StatType.Attack => "ATK",
-                StatType.Defense => "DEF",
-                StatType.Speed => "SPD",
-                StatType.CritChance => "CRIT%",
-                StatType.CritDamage => "CDMG",
+                StatType.HP => "HP",
+                StatType.ATK => "ATK",
+                StatType.DEF => "DEF",
+                StatType.SPD => "SPD",
                 _ => statType.ToString()
             };
         }

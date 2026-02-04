@@ -26,20 +26,34 @@ namespace IdleViking.UI
         public void Setup(MilestoneData milestone, bool isComplete, float progress)
         {
             if (nameText != null)
-                nameText.text = milestone.DisplayName;
+                nameText.text = milestone.displayName;
 
             if (descriptionText != null)
-                descriptionText.text = milestone.Description;
+                descriptionText.text = milestone.description;
 
-            if (icon != null && milestone.Icon != null)
-                icon.sprite = milestone.Icon;
-
-            if (rewardText != null)
+            if (rewardText != null && milestone.rewards != null)
             {
                 string rewards = "";
-                foreach (var reward in milestone.Rewards)
+                foreach (var reward in milestone.rewards)
                 {
-                    rewards += $"{reward.RewardType}: {reward.Value}\n";
+                    switch (reward.rewardType)
+                    {
+                        case MilestoneRewardType.Resource:
+                            rewards += $"{reward.resourceType}: +{reward.amount}\n";
+                            break;
+                        case MilestoneRewardType.FarmSlot:
+                            rewards += $"Farm Slot: +{reward.amount}\n";
+                            break;
+                        case MilestoneRewardType.EnergyCapIncrease:
+                            rewards += $"Energy Cap: +{reward.amount}\n";
+                            break;
+                        case MilestoneRewardType.InventorySlot:
+                            rewards += $"Inventory: +{reward.amount}\n";
+                            break;
+                        case MilestoneRewardType.UnlockFlag:
+                            rewards += $"Unlock: {reward.unlockFlag}\n";
+                            break;
+                    }
                 }
                 rewardText.text = rewards.TrimEnd('\n');
             }
@@ -59,7 +73,7 @@ namespace IdleViking.UI
             if (background != null)
                 background.color = isComplete ? completeColor : incompleteColor;
 
-            // Dim completed milestones slightly
+            // Dim incomplete milestones slightly
             if (icon != null)
                 icon.color = isComplete ? Color.white : new Color(0.7f, 0.7f, 0.7f);
         }

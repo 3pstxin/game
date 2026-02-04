@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using IdleViking.Core;
 using IdleViking.Models;
 
 namespace IdleViking.UI
@@ -44,7 +45,7 @@ namespace IdleViking.UI
                     text.text = $"{kvp.Key}: {FormatNumber(kvp.Value)}";
 
                     // Check affordability
-                    bool canAfford = state != null && state.Resources.GetAmount(kvp.Key) >= kvp.Value;
+                    bool canAfford = state != null && state.resources.Get(kvp.Key) >= kvp.Value;
                     text.color = canAfford ? affordableColor : unaffordableColor;
                 }
             }
@@ -73,7 +74,7 @@ namespace IdleViking.UI
 
             foreach (var kvp in costs)
             {
-                if (state.Resources.GetAmount(kvp.Key) < kvp.Value)
+                if (state.resources.Get(kvp.Key) < kvp.Value)
                     return false;
             }
             return true;
@@ -95,7 +96,7 @@ namespace IdleViking.UI
                 var text = _spawnedItems[index].GetComponentInChildren<TextMeshProUGUI>();
                 if (text != null)
                 {
-                    bool canAfford = state.Resources.GetAmount(kvp.Key) >= kvp.Value;
+                    bool canAfford = state.resources.Get(kvp.Key) >= kvp.Value;
                     text.color = canAfford ? affordableColor : unaffordableColor;
                 }
                 index++;

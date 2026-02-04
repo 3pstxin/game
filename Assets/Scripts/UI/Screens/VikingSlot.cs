@@ -16,7 +16,6 @@ namespace IdleViking.UI
         [SerializeField] private Image portrait;
         [SerializeField] private TextMeshProUGUI nameText;
         [SerializeField] private TextMeshProUGUI levelText;
-        [SerializeField] private ProgressBar hpBar;
         [SerializeField] private Button slotButton;
         [SerializeField] private GameObject selectedIndicator;
 
@@ -27,7 +26,7 @@ namespace IdleViking.UI
         public event Action<VikingSlot> OnSlotClicked;
 
         public bool IsSelected { get; private set; }
-        public VikingState VikingState { get; private set; }
+        public VikingInstance VikingInstance { get; private set; }
 
         private void Awake()
         {
@@ -44,24 +43,15 @@ namespace IdleViking.UI
                 slotButton.onClick.RemoveListener(HandleClick);
         }
 
-        public void Setup(VikingState state, VikingData data)
+        public void Setup(VikingInstance instance, VikingData data)
         {
-            VikingState = state;
+            VikingInstance = instance;
 
             if (nameText != null)
-                nameText.text = data?.DisplayName ?? "Viking";
+                nameText.text = data?.displayName ?? "Viking";
 
             if (levelText != null)
-                levelText.text = $"Lv.{state.Level}";
-
-            if (portrait != null && data?.Portrait != null)
-                portrait.sprite = data.Portrait;
-
-            if (hpBar != null)
-            {
-                var stats = data != null ? state.GetTotalStats(data) : new CombatStats();
-                hpBar.SetProgress(state.CurrentHP, stats.MaxHP);
-            }
+                levelText.text = $"Lv.{instance.level}";
         }
 
         public void SetSelected(bool selected)
@@ -73,12 +63,6 @@ namespace IdleViking.UI
 
             if (portrait != null)
                 portrait.color = selected ? selectedColor : normalColor;
-        }
-
-        public void UpdateHP(int currentHP, int maxHP)
-        {
-            if (hpBar != null)
-                hpBar.SetProgress(currentHP, maxHP);
         }
 
         private void HandleClick()

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using IdleViking.Core;
 using IdleViking.Data;
 using IdleViking.Models;
 
@@ -15,9 +16,6 @@ namespace IdleViking.UI
         [Header("Building List")]
         [SerializeField] private Transform buildingContainer;
         [SerializeField] private BuildingListItem buildingItemPrefab;
-
-        [Header("Database")]
-        [SerializeField] private BuildingDatabase buildingDatabase;
 
         private List<BuildingListItem> _spawnedItems = new List<BuildingListItem>();
 
@@ -41,18 +39,15 @@ namespace IdleViking.UI
 
         private void PopulateBuildings()
         {
-            if (buildingDatabase == null || buildingContainer == null || buildingItemPrefab == null)
+            if (buildingContainer == null || buildingItemPrefab == null)
                 return;
 
             var state = GameManager.Instance?.State;
-            if (state == null) return;
+            var buildingDB = GameManager.Instance?.BuildingDB;
+            if (state == null || buildingDB == null) return;
 
-            foreach (var building in buildingDatabase.Buildings)
+            foreach (var building in buildingDB.Buildings)
             {
-                // Check if unlocked
-                if (!BuildingSystem.IsUnlocked(state, building))
-                    continue;
-
                 var item = Instantiate(buildingItemPrefab, buildingContainer);
                 item.Setup(building, state);
                 item.OnUpgradeClicked += OnBuildingUpgrade;
@@ -65,17 +60,31 @@ namespace IdleViking.UI
             var state = GameManager.Instance?.State;
             if (state == null) return;
 
-            if (BuildingSystem.TryUpgrade(state, building))
+            // Try to upgrade using state directly
+            int currentLevel = state.buildings.GetLevel(building.buildingId);
+            var costs = building.GetCostsForLevel(currentLevel + 1);
+
+            if (state.resources.CanAfford(costs))
             {
+                state.resources.Spend(costs);
+                if (currentLevel == 0)
+                {
+                    state.buildings.AddBuilding(building.buildingId);
+                }
+                else
+                {
+                    var instance = state.buildings.GetBuilding(building.buildingId);
+                    if (instance != null)
+                        instance.level++;
+                }
+
                 UIEvents.FireBuildingsChanged();
                 UIEvents.FireResourcesChanged();
-
-                int newLevel = state.Buildings.GetBuildingLevel(building.BuildingId);
-                UIEvents.FireToast($"{building.DisplayName} upgraded to Lv.{newLevel}!");
+                UIEvents.FireToast($"{building.displayName} upgraded!");
             }
             else
             {
-                UIEvents.FireToast("Cannot upgrade - check requirements.");
+                UIEvents.FireToast("Cannot afford upgrade.");
             }
         }
 

@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using TMPro;
 using IdleViking.Data;
 using IdleViking.Models;
+using IdleViking.Systems;
 
 namespace IdleViking.UI
 {
@@ -17,7 +18,7 @@ namespace IdleViking.UI
         [SerializeField] private Image cropIcon;
         [SerializeField] private TextMeshProUGUI statusText;
         [SerializeField] private ProgressBar growthBar;
-        [SerializeField] private TimerDisplay timer;
+        [SerializeField] private TextMeshProUGUI timerText;
         [SerializeField] private Button plotButton;
         [SerializeField] private GameObject readyIndicator;
 
@@ -30,7 +31,7 @@ namespace IdleViking.UI
 
         public int PlotId { get; private set; }
 
-        private PlotState _plotState;
+        private FarmPlotInstance _plot;
         private FarmPlotData _plotData;
 
         private void Awake()
@@ -47,16 +48,16 @@ namespace IdleViking.UI
 
         private void Update()
         {
-            if (_plotState != null && _plotState.IsPlanted && !_plotState.IsReady())
+            if (_plot != null && _plotData != null && !FarmSystem.IsReady(_plot, _plotData))
             {
                 UpdateGrowthProgress();
             }
         }
 
-        public void Setup(int plotId, PlotState state, FarmPlotData data)
+        public void Setup(FarmPlotInstance plot, FarmPlotData data)
         {
-            PlotId = plotId;
-            _plotState = state;
+            PlotId = plot.plotId;
+            _plot = plot;
             _plotData = data;
 
             RefreshDisplay();
@@ -64,26 +65,20 @@ namespace IdleViking.UI
 
         private void RefreshDisplay()
         {
-            if (_plotState == null) return;
+            if (_plot == null || _plotData == null) return;
 
-            bool isPlanted = _plotState.IsPlanted;
-            bool isReady = _plotState.IsReady();
+            bool isReady = FarmSystem.IsReady(_plot, _plotData);
 
             // Set color based on state
             if (plotImage != null)
             {
-                if (isReady)
-                    plotImage.color = readyColor;
-                else if (isPlanted)
-                    plotImage.color = plantedColor;
-                else
-                    plotImage.color = emptyColor;
+                plotImage.color = isReady ? readyColor : plantedColor;
             }
 
-            // Show/hide crop icon
+            // Show crop icon
             if (cropIcon != null)
             {
-                cropIcon.gameObject.SetActive(isPlanted);
+                cropIcon.gameObject.SetActive(true);
             }
 
             // Status text
@@ -91,10 +86,8 @@ namespace IdleViking.UI
             {
                 if (isReady)
                     statusText.text = "Ready!";
-                else if (isPlanted)
-                    statusText.text = _plotState.PlantedCropName ?? "Growing";
                 else
-                    statusText.text = "Empty";
+                    statusText.text = _plotData.displayName;
             }
 
             // Ready indicator
@@ -104,39 +97,44 @@ namespace IdleViking.UI
             // Growth bar
             if (growthBar != null)
             {
-                growthBar.gameObject.SetActive(isPlanted && !isReady);
-                if (isPlanted && !isReady)
+                growthBar.gameObject.SetActive(!isReady);
+                if (!isReady)
                 {
                     UpdateGrowthProgress();
-                }
-            }
-
-            // Timer
-            if (timer != null)
-            {
-                timer.gameObject.SetActive(isPlanted && !isReady);
-                if (isPlanted && !isReady)
-                {
-                    long endTime = _plotState.PlantedTime + (long)_plotState.GrowthDuration;
-                    timer.StartTimer(endTime);
                 }
             }
         }
 
         private void UpdateGrowthProgress()
         {
-            if (_plotState == null || !_plotState.IsPlanted) return;
+            if (_plot == null || _plotData == null) return;
 
-            float progress = _plotState.GetGrowthProgress();
+            double elapsed = _plot.GetElapsedSeconds();
+            double total = _plotData.growTimeSeconds;
+            float progress = Mathf.Clamp01((float)(elapsed / total));
 
             if (growthBar != null)
                 growthBar.SetProgress(progress);
 
+            // Update timer text
+            if (timerText != null)
+            {
+                double remaining = FarmSystem.GetTimeRemaining(_plot, _plotData);
+                timerText.text = FormatTime((float)remaining);
+            }
+
             // Check if just became ready
-            if (_plotState.IsReady())
+            if (FarmSystem.IsReady(_plot, _plotData))
             {
                 RefreshDisplay();
             }
+        }
+
+        private string FormatTime(float totalSeconds)
+        {
+            int minutes = (int)(totalSeconds / 60);
+            int seconds = (int)(totalSeconds % 60);
+            return $"{minutes}:{seconds:D2}";
         }
 
         private void HandleClick()

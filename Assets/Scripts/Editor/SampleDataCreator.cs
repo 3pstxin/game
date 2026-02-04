@@ -504,9 +504,9 @@ namespace IdleViking.Editor
 
             // Database
             var db = CreateAsset<FarmDatabase>($"{DataPath}/FarmDatabase.asset");
-            db.Crops.Add(wheat);
-            db.Crops.Add(carrots);
-            db.Crops.Add(chickens);
+            db.farmPlots.Add(wheat);
+            db.farmPlots.Add(carrots);
+            db.farmPlots.Add(chickens);
 
             Debug.Log("[SampleData] Created Farm data");
         }
@@ -548,8 +548,9 @@ namespace IdleViking.Editor
             {
                 new MilestoneCondition
                 {
-                    type = MilestoneConditionType.TotalBuildingLevels,
-                    requiredValue = 10
+                    type = MilestoneConditionType.BuildingLevel,
+                    targetId = "town_hall",
+                    requiredValue = 3
                 }
             };
             builder.rewards = new MilestoneReward[]
@@ -596,8 +597,9 @@ namespace IdleViking.Editor
             {
                 new MilestoneCondition
                 {
-                    type = MilestoneConditionType.DungeonFloor,
-                    requiredValue = 5
+                    type = MilestoneConditionType.DungeonCleared,
+                    targetId = "dark_forest",
+                    requiredValue = 1
                 }
             };
             dungeonDiver.rewards = new MilestoneReward[]

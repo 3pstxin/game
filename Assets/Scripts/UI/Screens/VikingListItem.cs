@@ -17,7 +17,6 @@ namespace IdleViking.UI
         [SerializeField] private TextMeshProUGUI nameText;
         [SerializeField] private TextMeshProUGUI levelText;
         [SerializeField] private TextMeshProUGUI assignmentText;
-        [SerializeField] private ProgressBar expBar;
         [SerializeField] private Button selectButton;
 
         [Header("Rarity Colors")]
@@ -28,9 +27,9 @@ namespace IdleViking.UI
         [SerializeField] private Color epicColor = new Color(0.5f, 0f, 0.5f);
         [SerializeField] private Color legendaryColor = new Color(1f, 0.5f, 0f);
 
-        public event Action<VikingState> OnVikingClicked;
+        public event Action<VikingInstance> OnVikingClicked;
 
-        private VikingState _vikingState;
+        private VikingInstance _vikingInstance;
         private VikingData _vikingData;
 
         private void Awake()
@@ -45,31 +44,22 @@ namespace IdleViking.UI
                 selectButton.onClick.RemoveListener(HandleClick);
         }
 
-        public void Setup(VikingState state, VikingData data)
+        public void Setup(VikingInstance instance, VikingData data)
         {
-            _vikingState = state;
+            _vikingInstance = instance;
             _vikingData = data;
 
             if (nameText != null)
-                nameText.text = data.DisplayName;
+                nameText.text = data.displayName;
 
             if (levelText != null)
-                levelText.text = $"Lv.{state.Level}";
+                levelText.text = $"Lv.{instance.level}";
 
             if (assignmentText != null)
-                assignmentText.text = GetAssignmentText(state.Assignment);
-
-            if (portrait != null && data.Portrait != null)
-                portrait.sprite = data.Portrait;
-
-            if (expBar != null)
-            {
-                int expForNext = VikingSystem.GetExpForLevel(state.Level + 1);
-                expBar.SetProgress(state.Experience, expForNext);
-            }
+                assignmentText.text = GetAssignmentText(instance.assignment);
 
             if (rarityBorder != null)
-                rarityBorder.color = GetRarityColor(data.Rarity);
+                rarityBorder.color = GetRarityColor(data.rarity);
         }
 
         private string GetAssignmentText(VikingAssignment assignment)
@@ -77,9 +67,8 @@ namespace IdleViking.UI
             return assignment switch
             {
                 VikingAssignment.Idle => "Idle",
-                VikingAssignment.Production => "Working",
-                VikingAssignment.Combat => "Combat",
-                VikingAssignment.Farming => "Farming",
+                VikingAssignment.Building => "Working",
+                VikingAssignment.Party => "In Party",
                 _ => assignment.ToString()
             };
         }
@@ -99,7 +88,7 @@ namespace IdleViking.UI
 
         private void HandleClick()
         {
-            OnVikingClicked?.Invoke(_vikingState);
+            OnVikingClicked?.Invoke(_vikingInstance);
         }
     }
 }

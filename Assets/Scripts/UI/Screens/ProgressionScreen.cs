@@ -2,8 +2,10 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using IdleViking.Core;
 using IdleViking.Data;
 using IdleViking.Models;
+using IdleViking.Systems;
 
 namespace IdleViking.UI
 {
@@ -54,9 +56,9 @@ namespace IdleViking.UI
         private void OnDestroy()
         {
             if (milestonesTabButton != null)
-                milestonesTabButton.onClick.RemoveListener(() => ShowTab(true));
+                milestonesTabButton.onClick.RemoveAllListeners();
             if (prestigeTabButton != null)
-                prestigeTabButton.onClick.RemoveListener(() => ShowTab(false));
+                prestigeTabButton.onClick.RemoveAllListeners();
             if (prestigeButton != null)
                 prestigeButton.onClick.RemoveListener(OnPrestigeClicked);
         }
@@ -98,14 +100,33 @@ namespace IdleViking.UI
             var state = GameManager.Instance?.State;
             if (state == null) return;
 
-            foreach (var milestone in milestoneDatabase.Milestones)
+            foreach (var milestone in milestoneDatabase.GetAll())
             {
+                // Skip hidden milestones
+                if (!ProgressionSystem.IsVisible(state, milestone))
+                    continue;
+
                 var item = Instantiate(milestoneItemPrefab, milestoneContainer);
-                bool isComplete = state.Progression.IsMilestoneComplete(milestone.MilestoneId);
-                float progress = ProgressionSystem.GetMilestoneProgress(state, milestone);
+                bool isComplete = state.progression.IsMilestoneCompleted(milestone.milestoneId);
+                float progress = CalculateMilestoneProgress(state, milestone);
                 item.Setup(milestone, isComplete, progress);
                 _milestoneItems.Add(item);
             }
+        }
+
+        private float CalculateMilestoneProgress(GameState state, MilestoneData milestone)
+        {
+            if (milestone.conditions == null || milestone.conditions.Length == 0)
+                return 1f;
+
+            // Simple progress: percentage of conditions met
+            int metCount = 0;
+            foreach (var condition in milestone.conditions)
+            {
+                if (ProgressionSystem.EvaluateCondition(state, condition))
+                    metCount++;
+            }
+            return (float)metCount / milestone.conditions.Length;
         }
 
         private void RefreshPrestige()
@@ -113,9 +134,9 @@ namespace IdleViking.UI
             var state = GameManager.Instance?.State;
             if (state == null) return;
 
-            int currentLevel = state.Progression.PrestigeLevel;
-            float currentMult = state.Progression.GetPrestigeMultiplier();
-            float nextMult = 1f + (currentLevel + 1) * 0.1f; // Next level multiplier
+            int currentLevel = state.progression.prestigeLevel;
+            float currentMult = 1f + currentLevel * 0.1f;
+            float nextMult = 1f + (currentLevel + 1) * 0.1f;
 
             if (currentPrestigeText != null)
                 currentPrestigeText.text = $"Prestige Level: {currentLevel}";
@@ -126,28 +147,17 @@ namespace IdleViking.UI
             if (nextMultiplierText != null)
                 nextMultiplierText.text = $"Next Level Bonus: x{nextMult:F1}";
 
-            // Check prestige requirements
-            bool canPrestige = ProgressionSystem.CanPrestige(state, milestoneDatabase);
-
+            // Prestige requirements info
             if (prestigeRequirementsText != null)
             {
-                if (canPrestige)
-                {
-                    prestigeRequirementsText.text = "All requirements met!";
-                    prestigeRequirementsText.color = Color.green;
-                }
-                else
-                {
-                    // Show what's needed
-                    int completedMilestones = state.Progression.CompletedMilestones.Count;
-                    int requiredMilestones = milestoneDatabase != null ? milestoneDatabase.Milestones.Count / 2 : 5;
-                    prestigeRequirementsText.text = $"Complete {requiredMilestones} milestones ({completedMilestones} done)";
-                    prestigeRequirementsText.color = Color.yellow;
-                }
+                int completedMilestones = state.progression.completedMilestones.Count;
+                int totalMilestones = milestoneDatabase?.GetAll().Count ?? 0;
+                prestigeRequirementsText.text = $"Milestones: {completedMilestones}/{totalMilestones}";
             }
 
+            // Prestige button (disabled for now - would need PrestigeData)
             if (prestigeButton != null)
-                prestigeButton.interactable = canPrestige;
+                prestigeButton.interactable = false;
 
             if (prestigeWarningText != null)
             {
@@ -163,49 +173,25 @@ namespace IdleViking.UI
 
             if (totalPlayTimeText != null)
             {
-                // Calculate total play time (rough estimate from timestamps)
-                long now = System.DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-                long playTime = now - state.CreatedTimestamp;
-                totalPlayTimeText.text = $"Total Play Time: {FormatPlayTime(playTime)}";
+                totalPlayTimeText.text = "Total Play Time: --";
             }
 
             if (milestonesCompletedText != null)
             {
-                int completed = state.Progression.CompletedMilestones.Count;
-                int total = milestoneDatabase?.Milestones.Count ?? 0;
+                int completed = state.progression.completedMilestones.Count;
+                int total = milestoneDatabase?.GetAll().Count ?? 0;
                 milestonesCompletedText.text = $"Milestones: {completed}/{total}";
             }
         }
 
         private void OnPrestigeClicked()
         {
-            UIManager.Instance?.ShowConfirm(
-                "Confirm Prestige",
-                "Are you sure you want to prestige? This will reset most progress but grant permanent bonuses.",
-                confirmed =>
-                {
-                    if (confirmed)
-                    {
-                        var state = GameManager.Instance?.State;
-                        if (state != null && ProgressionSystem.CanPrestige(state, milestoneDatabase))
-                        {
-                            ProgressionSystem.PerformPrestige(state, milestoneDatabase);
-                            UIEvents.FirePrestigeComplete(state.Progression.PrestigeLevel);
-                            UIEvents.FireGameStateLoaded();
-                            UIEvents.FireToast($"Prestiged! Now level {state.Progression.PrestigeLevel}");
-                        }
-                    }
-                }
-            );
+            UIEvents.FireToast("Prestige not available yet.");
         }
 
         private void OnMilestoneCompleted(MilestoneData milestone)
         {
             Refresh();
-            UIManager.Instance?.ShowReward(
-                "Milestone Complete!",
-                new List<string> { milestone.DisplayName, milestone.Description }
-            );
         }
 
         private void OnPrestigeComplete(int newLevel)
@@ -226,20 +212,6 @@ namespace IdleViking.UI
         protected override void OnHide()
         {
             ClearMilestoneItems();
-        }
-
-        private string FormatPlayTime(long seconds)
-        {
-            int days = (int)(seconds / 86400);
-            int hours = (int)((seconds % 86400) / 3600);
-            int minutes = (int)((seconds % 3600) / 60);
-
-            if (days > 0)
-                return $"{days}d {hours}h";
-            else if (hours > 0)
-                return $"{hours}h {minutes}m";
-            else
-                return $"{minutes}m";
         }
     }
 }

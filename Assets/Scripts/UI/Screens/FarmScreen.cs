@@ -2,8 +2,10 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using IdleViking.Core;
 using IdleViking.Data;
 using IdleViking.Models;
+using IdleViking.Systems;
 
 namespace IdleViking.UI
 {
@@ -32,7 +34,6 @@ namespace IdleViking.UI
 
         private List<FarmPlotUI> _plotUIs = new List<FarmPlotUI>();
         private List<SeedListItem> _seedItems = new List<SeedListItem>();
-        private int _selectedPlotId = -1;
 
         protected override void Awake()
         {
@@ -76,15 +77,16 @@ namespace IdleViking.UI
             ClearPlots();
 
             var state = GameManager.Instance?.State;
-            if (state == null || plotContainer == null || plotPrefab == null) return;
+            if (state == null || plotContainer == null || plotPrefab == null || farmDatabase == null)
+                return;
 
-            foreach (var kvp in state.Farm.Plots)
+            foreach (var plot in state.farm.plots)
             {
-                var plotState = kvp.Value;
-                var plotData = farmDatabase?.GetPlotById(plotState.PlotDataId);
+                var plotData = farmDatabase.GetFarmPlot(plot.farmPlotDataId);
+                if (plotData == null) continue;
 
                 var plotUI = Instantiate(plotPrefab, plotContainer);
-                plotUI.Setup(kvp.Key, plotState, plotData);
+                plotUI.Setup(plot, plotData);
                 plotUI.OnPlotClicked += OnPlotClicked;
                 _plotUIs.Add(plotUI);
             }
@@ -95,25 +97,22 @@ namespace IdleViking.UI
             var state = GameManager.Instance?.State;
             if (state == null) return;
 
-            int total = state.Farm.Plots.Count;
-            int active = 0;
+            int active = state.farm.plots.Count;
+            int max = state.farm.maxPlots;
             int ready = 0;
 
-            foreach (var kvp in state.Farm.Plots)
+            foreach (var plot in state.farm.plots)
             {
-                if (kvp.Value.IsPlanted)
-                {
-                    active++;
-                    if (kvp.Value.IsReady())
-                        ready++;
-                }
+                var plotData = farmDatabase?.GetFarmPlot(plot.farmPlotDataId);
+                if (plotData != null && FarmSystem.IsReady(plot, plotData))
+                    ready++;
             }
 
             if (totalPlotsText != null)
-                totalPlotsText.text = $"Plots: {total}";
+                totalPlotsText.text = $"Plots: {active}/{max}";
 
             if (activePlotsText != null)
-                activePlotsText.text = $"Growing: {active} | Ready: {ready}";
+                activePlotsText.text = $"Ready: {ready}";
 
             if (harvestAllButton != null)
                 harvestAllButton.interactable = ready > 0;
@@ -122,36 +121,28 @@ namespace IdleViking.UI
         private void OnPlotClicked(int plotId)
         {
             var state = GameManager.Instance?.State;
-            if (state == null) return;
+            if (state == null || farmDatabase == null) return;
 
-            if (!state.Farm.Plots.TryGetValue(plotId, out var plotState))
-                return;
+            var plot = state.farm.GetPlot(plotId);
+            if (plot == null) return;
 
-            if (plotState.IsPlanted)
+            var plotData = farmDatabase.GetFarmPlot(plot.farmPlotDataId);
+            if (plotData == null) return;
+
+            if (FarmSystem.IsReady(plot, plotData))
             {
-                // Try to harvest
-                if (plotState.IsReady())
+                double yield = FarmSystem.TryHarvest(state, farmDatabase, plotId);
+                if (yield > 0)
                 {
-                    var rewards = FarmSystem.Harvest(state, plotId);
-                    if (rewards != null)
-                    {
-                        UIEvents.FireFarmChanged();
-                        UIEvents.FireResourcesChanged();
-                        ShowHarvestRewards(rewards);
-                    }
-                }
-                else
-                {
-                    // Show time remaining
-                    float remaining = plotState.GetRemainingTime();
-                    UIEvents.FireToast($"Ready in {FormatTime(remaining)}");
+                    UIEvents.FireFarmChanged();
+                    UIEvents.FireResourcesChanged();
+                    UIEvents.FireToast($"Harvested {plotData.displayName}: +{yield} {plotData.yieldResource}");
                 }
             }
             else
             {
-                // Show planting options
-                _selectedPlotId = plotId;
-                ShowPlantingPanel();
+                double remaining = FarmSystem.GetTimeRemaining(plot, plotData);
+                UIEvents.FireToast($"Ready in {FormatTime((float)remaining)}");
             }
         }
 
@@ -167,7 +158,6 @@ namespace IdleViking.UI
         {
             if (plantingPanel != null)
                 plantingPanel.SetActive(false);
-            _selectedPlotId = -1;
             ClearSeedItems();
         }
 
@@ -179,8 +169,7 @@ namespace IdleViking.UI
             if (state == null || farmDatabase == null || seedListContainer == null || seedItemPrefab == null)
                 return;
 
-            // Show crops that can be planted
-            foreach (var crop in farmDatabase.Crops)
+            foreach (var crop in farmDatabase.GetAll())
             {
                 var item = Instantiate(seedItemPrefab, seedListContainer);
                 item.Setup(crop, state);
@@ -191,47 +180,44 @@ namespace IdleViking.UI
 
         private void OnSeedSelected(FarmPlotData cropData)
         {
-            if (_selectedPlotId < 0) return;
-
             var state = GameManager.Instance?.State;
-            if (state == null) return;
+            if (state == null || farmDatabase == null) return;
 
-            if (FarmSystem.Plant(state, _selectedPlotId, cropData))
+            if (FarmSystem.TryPlant(state, farmDatabase, cropData.farmPlotId))
             {
                 UIEvents.FireFarmChanged();
                 UIEvents.FireResourcesChanged();
                 HidePlantingPanel();
-                UIEvents.FireToast($"Planted {cropData.DisplayName}!");
+                UIEvents.FireToast($"Planted {cropData.displayName}!");
             }
             else
             {
-                UIEvents.FireToast("Cannot plant - check costs.");
+                UIEvents.FireToast("Cannot plant - check costs or slots.");
             }
         }
 
         private void HarvestAll()
         {
             var state = GameManager.Instance?.State;
-            if (state == null) return;
+            if (state == null || farmDatabase == null) return;
 
             int harvested = 0;
-            var totalRewards = new Dictionary<ResourceType, double>();
+            double totalYield = 0;
 
-            foreach (var kvp in state.Farm.Plots)
+            // Iterate in reverse since harvesting crops removes them
+            for (int i = state.farm.plots.Count - 1; i >= 0; i--)
             {
-                if (kvp.Value.IsPlanted && kvp.Value.IsReady())
+                var plot = state.farm.plots[i];
+                var plotData = farmDatabase.GetFarmPlot(plot.farmPlotDataId);
+                if (plotData == null) continue;
+
+                if (FarmSystem.IsReady(plot, plotData))
                 {
-                    var rewards = FarmSystem.Harvest(state, kvp.Key);
-                    if (rewards != null)
+                    double yield = FarmSystem.TryHarvest(state, farmDatabase, plot.plotId);
+                    if (yield > 0)
                     {
                         harvested++;
-                        foreach (var r in rewards)
-                        {
-                            if (totalRewards.ContainsKey(r.Key))
-                                totalRewards[r.Key] += r.Value;
-                            else
-                                totalRewards[r.Key] = r.Value;
-                        }
+                        totalYield += yield;
                     }
                 }
             }
@@ -244,33 +230,9 @@ namespace IdleViking.UI
             }
         }
 
-        private void ShowHarvestRewards(Dictionary<ResourceType, double> rewards)
-        {
-            var rewardStrings = new List<string>();
-            foreach (var kvp in rewards)
-            {
-                rewardStrings.Add($"{kvp.Key}: +{FormatNumber(kvp.Value)}");
-            }
-
-            UIManager.Instance?.ShowReward("Harvest Complete!", rewardStrings);
-        }
-
         private void OnPlotReady(int plotId)
         {
-            // Refresh the specific plot
-            foreach (var plotUI in _plotUIs)
-            {
-                if (plotUI.PlotId == plotId)
-                {
-                    var state = GameManager.Instance?.State;
-                    if (state != null && state.Farm.Plots.TryGetValue(plotId, out var plotState))
-                    {
-                        var plotData = farmDatabase?.GetPlotById(plotState.PlotDataId);
-                        plotUI.Setup(plotId, plotState, plotData);
-                    }
-                    break;
-                }
-            }
+            RefreshPlots();
             RefreshInfo();
         }
 
@@ -318,15 +280,6 @@ namespace IdleViking.UI
                 return $"{minutes}m {seconds}s";
             else
                 return $"{seconds}s";
-        }
-
-        private string FormatNumber(double value)
-        {
-            if (value >= 1_000_000)
-                return $"{value / 1_000_000:F1}M";
-            if (value >= 1_000)
-                return $"{value / 1_000:F1}K";
-            return value.ToString("F0");
         }
     }
 }

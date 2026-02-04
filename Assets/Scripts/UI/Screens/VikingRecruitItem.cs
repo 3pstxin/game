@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using IdleViking.Core;
 using IdleViking.Data;
 using IdleViking.Models;
 
@@ -19,15 +20,11 @@ namespace IdleViking.UI
         [SerializeField] private TextMeshProUGUI statsText;
         [SerializeField] private Button recruitButton;
         [SerializeField] private CostDisplay costDisplay;
-
-        [Header("Rarity")]
-        [SerializeField] private Image rarityBorder;
         [SerializeField] private TextMeshProUGUI rarityText;
 
         public event Action<VikingData> OnRecruitClicked;
 
         private VikingData _vikingData;
-        private GameState _state;
 
         private void Awake()
         {
@@ -44,24 +41,19 @@ namespace IdleViking.UI
         public void Setup(VikingData data, GameState state)
         {
             _vikingData = data;
-            _state = state;
 
             if (nameText != null)
-                nameText.text = data.DisplayName;
+                nameText.text = data.displayName;
 
             if (descriptionText != null)
-                descriptionText.text = data.Description;
-
-            if (portrait != null && data.Portrait != null)
-                portrait.sprite = data.Portrait;
+                descriptionText.text = data.description;
 
             if (rarityText != null)
-                rarityText.text = data.Rarity.ToString();
+                rarityText.text = data.rarity.ToString();
 
             if (statsText != null)
             {
-                var stats = data.BaseStats;
-                statsText.text = $"HP:{stats.MaxHP} ATK:{stats.Attack} DEF:{stats.Defense}";
+                statsText.text = $"HP:{data.baseHP} ATK:{data.baseATK} DEF:{data.baseDEF}";
             }
 
             RefreshAffordability();
@@ -69,12 +61,22 @@ namespace IdleViking.UI
 
         public void RefreshAffordability()
         {
-            if (_vikingData == null || _state == null) return;
+            if (_vikingData == null) return;
 
-            if (costDisplay != null)
-                costDisplay.SetCosts(_vikingData.RecruitCost);
+            var state = GameManager.Instance?.State;
+            if (state == null) return;
 
-            bool canAfford = VikingSystem.CanAffordRecruit(_state, _vikingData);
+            if (costDisplay != null && _vikingData.recruitCosts != null)
+            {
+                var costDict = new System.Collections.Generic.Dictionary<ResourceType, double>();
+                foreach (var c in _vikingData.recruitCosts)
+                {
+                    costDict[c.resourceType] = c.amount;
+                }
+                costDisplay.SetCosts(costDict);
+            }
+
+            bool canAfford = _vikingData.recruitCosts != null && state.resources.CanAfford(_vikingData.recruitCosts);
             if (recruitButton != null)
                 recruitButton.interactable = canAfford;
         }
