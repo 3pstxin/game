@@ -111,8 +111,9 @@ namespace IdleViking.Editor
         {
             var screenObj = new GameObject(name);
             screenObj.transform.SetParent(parent, false);
-            var screen = screenObj.AddComponent<T>();
-            var rect = screenObj.GetComponent<RectTransform>();
+
+            // Add RectTransform first (required for UI)
+            var rect = screenObj.AddComponent<RectTransform>();
             rect.anchorMin = Vector2.zero;
             rect.anchorMax = Vector2.one;
             rect.sizeDelta = Vector2.zero;
@@ -120,6 +121,9 @@ namespace IdleViking.Editor
             // Add background
             var bg = screenObj.AddComponent<Image>();
             bg.color = new Color(0.1f, 0.1f, 0.12f, 1f);
+
+            // Add screen component after UI setup
+            var screen = screenObj.AddComponent<T>();
 
             // Add placeholder text
             var textObj = new GameObject("Placeholder");
