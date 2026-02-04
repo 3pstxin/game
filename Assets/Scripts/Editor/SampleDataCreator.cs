@@ -100,10 +100,10 @@ namespace IdleViking.Editor
 
             // Database
             var db = CreateAsset<ResourceDatabase>($"{DataPath}/ResourceDatabase.asset");
-            db.Producers.Add(goldMine);
-            db.Producers.Add(lumberMill);
-            db.Producers.Add(quarry);
-            db.Producers.Add(farm);
+            db.producers.Add(goldMine);
+            db.producers.Add(lumberMill);
+            db.producers.Add(quarry);
+            db.producers.Add(farm);
 
             Debug.Log("[SampleData] Created Resource data");
             return new[] { goldMine, lumberMill, quarry, farm };
@@ -169,10 +169,10 @@ namespace IdleViking.Editor
 
             // Database
             var db = CreateAsset<BuildingDatabase>($"{DataPath}/BuildingDatabase.asset");
-            db.Buildings.Add(townHall);
-            db.Buildings.Add(goldMineBuilding);
-            db.Buildings.Add(lumberMillBuilding);
-            db.Buildings.Add(barracks);
+            db.buildings.Add(townHall);
+            db.buildings.Add(goldMineBuilding);
+            db.buildings.Add(lumberMillBuilding);
+            db.buildings.Add(barracks);
 
             Debug.Log("[SampleData] Created Building data");
         }
@@ -261,10 +261,10 @@ namespace IdleViking.Editor
 
             // Database
             var db = CreateAsset<VikingDatabase>($"{DataPath}/VikingDatabase.asset");
-            db.Vikings.Add(warrior);
-            db.Vikings.Add(archer);
-            db.Vikings.Add(berserker);
-            db.Vikings.Add(shieldmaiden);
+            db.vikings.Add(warrior);
+            db.vikings.Add(archer);
+            db.vikings.Add(berserker);
+            db.vikings.Add(shieldmaiden);
 
             Debug.Log("[SampleData] Created Viking data");
         }
@@ -343,11 +343,11 @@ namespace IdleViking.Editor
 
             // Database
             var db = CreateAsset<EquipmentDatabase>($"{DataPath}/EquipmentDatabase.asset");
-            db.Equipment.Add(ironSword);
-            db.Equipment.Add(steelAxe);
-            db.Equipment.Add(leatherArmor);
-            db.Equipment.Add(chainmail);
-            db.Equipment.Add(luckyCharm);
+            db.equipment.Add(ironSword);
+            db.equipment.Add(steelAxe);
+            db.equipment.Add(leatherArmor);
+            db.equipment.Add(chainmail);
+            db.equipment.Add(luckyCharm);
 
             Debug.Log("[SampleData] Created Equipment data");
         }
@@ -396,10 +396,10 @@ namespace IdleViking.Editor
 
             // Database
             var db = CreateAsset<EnemyDatabase>($"{DataPath}/EnemyDatabase.asset");
-            db.Enemies.Add(wolf);
-            db.Enemies.Add(bandit);
-            db.Enemies.Add(troll);
-            db.Enemies.Add(dragon);
+            db.enemies.Add(wolf);
+            db.enemies.Add(bandit);
+            db.enemies.Add(troll);
+            db.enemies.Add(dragon);
 
             Debug.Log("[SampleData] Created Enemy data");
             return new[] { wolf, bandit, troll, dragon };
@@ -450,9 +450,9 @@ namespace IdleViking.Editor
 
             // Database
             var db = CreateAsset<DungeonDatabase>($"{DataPath}/DungeonDatabase.asset");
-            db.Dungeons.Add(darkForest);
-            db.Dungeons.Add(banditCamp);
-            db.Dungeons.Add(trollCave);
+            db.dungeons.Add(darkForest);
+            db.dungeons.Add(banditCamp);
+            db.dungeons.Add(trollCave);
 
             Debug.Log("[SampleData] Created Dungeon data");
         }
@@ -613,10 +613,10 @@ namespace IdleViking.Editor
 
             // Database
             var db = CreateAsset<MilestoneDatabase>($"{DataPath}/MilestoneDatabase.asset");
-            db.Milestones.Add(firstGold);
-            db.Milestones.Add(builder);
-            db.Milestones.Add(recruiter);
-            db.Milestones.Add(dungeonDiver);
+            db.milestones.Add(firstGold);
+            db.milestones.Add(builder);
+            db.milestones.Add(recruiter);
+            db.milestones.Add(dungeonDiver);
 
             Debug.Log("[SampleData] Created Milestone data");
         }

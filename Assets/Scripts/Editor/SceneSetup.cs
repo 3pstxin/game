@@ -4,6 +4,7 @@ using UnityEditor;
 using UnityEngine.UI;
 using UnityEngine.EventSystems;
 using TMPro;
+using IdleViking.Core;
 using IdleViking.UI;
 
 namespace IdleViking.Editor
