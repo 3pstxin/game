@@ -46,7 +46,7 @@ namespace IdleViking.UI
             var buildingDB = GameManager.Instance?.BuildingDB;
             if (state == null || buildingDB == null) return;
 
-            foreach (var building in buildingDB.Buildings)
+            foreach (var building in buildingDB.buildings)
             {
                 var item = Instantiate(buildingItemPrefab, buildingContainer);
                 item.Setup(building, state);

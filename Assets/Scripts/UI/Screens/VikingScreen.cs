@@ -71,7 +71,7 @@ namespace IdleViking.UI
 
             foreach (var vikingInstance in state.vikings.vikings)
             {
-                var vikingData = vikingDB.GetVikingById(vikingInstance.vikingDataId);
+                var vikingData = vikingDB.GetViking(vikingInstance.vikingDataId);
                 if (vikingData == null) continue;
 
                 var item = Instantiate(vikingItemPrefab, vikingContainer);

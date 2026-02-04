@@ -62,7 +62,7 @@ namespace IdleViking.UI
             var dungeonDB = GameManager.Instance?.DungeonDB;
             if (state == null || dungeonDB == null) return;
 
-            foreach (var dungeon in dungeonDB.Dungeons)
+            foreach (var dungeon in dungeonDB.dungeons)
             {
                 var item = Instantiate(dungeonItemPrefab, dungeonListContainer);
                 item.Setup(dungeon, state);
